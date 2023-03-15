@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple PoweredUp Controller</title>
+    <script src="https://cdn.jsdelivr.net/npm/node-poweredup@latest/dist/browser/poweredup.js"></script>
+    <!-- <script src="../dist/browser/poweredup.js"></script> -->
+    <link rel="stylesheet" type="text/css" href="./styles.css" />
+    <script>
+      const poweredUP = new PoweredUP.PoweredUP();
+
+      const TRAIN_LED_COLOR = PoweredUP.Consts.Color.PURPLE;
+
+      let trainHub = null;
+      let aMotor = null;
+      let bMotor = null;
+      let remoteHub = null;
+      let remoteButtonLeft = null;
+      let remoteButtonRight = null;
+
+      let currentSpeed = 0;
+
+      poweredUP.on("discover", async (hub) => {
+        console.log("found hub", hub);
+        if (hub.type === PoweredUP.Consts.HubType.WEDO2_SMART_HUB) {
+          trainHub = hub;
+          await trainHub.connect();
+          const led = await trainHub.waitForDeviceByType(
+            PoweredUP.Consts.DeviceType.HUB_LED
+          );
+          aMotor = await trainHub.waitForDeviceAtPort("A");
+          bMotor = await trainHub.waitForDeviceAtPort("B");
+          led.setColor(TRAIN_LED_COLOR);
+          console.log(`Connected to train (${trainHub.name})!`);
+          if (trainHub && remoteHub) {
+            console.log("You're now ready to go!");
+          }
+        } else if (hub.type === PoweredUP.Consts.HubType.REMOTE_CONTROL) {
+          remoteHub = hub;
+          await remoteHub.connect();
+          const led = await remoteHub.waitForDeviceByType(
+            PoweredUP.Consts.DeviceType.HUB_LED
+          );
+          remoteButtonLeft = await remoteHub.waitForDeviceAtPort("LEFT");
+          remoteButtonRight = await remoteHub.waitForDeviceAtPort("RIGHT");
+          led.setColor(TRAIN_LED_COLOR);
+
+          remoteButtonLeft.on("remoteButton", (e) => {
+            const { event } = e;
+            if (aMotor) {
+              if (event === PoweredUP.Consts.ButtonState.UP) {
+                currentSpeed = 100;
+              } else if (event === PoweredUP.Consts.ButtonState.DOWN) {
+                currentSpeed = -100;
+              } else if (
+                event === PoweredUP.Consts.ButtonState.STOP ||
+                event === PoweredUP.Consts.ButtonState.RELEASED
+              ) {
+                currentSpeed = 0;
+              }
+              console.log("Setting power to", currentSpeed);
+              aMotor.setPower(currentSpeed);
+            }
+          });
+
+          remoteButtonRight.on("remoteButton", ({ event }) => {
+            if (bMotor) {
+              if (event === PoweredUP.Consts.ButtonState.UP) {
+                currentSpeed = 100;
+              } else if (event === PoweredUP.Consts.ButtonState.DOWN) {
+                currentSpeed = -100;
+              } else if (
+                event === PoweredUP.Consts.ButtonState.STOP ||
+                event === PoweredUP.Consts.ButtonState.RELEASED
+              ) {
+                currentSpeed = 0;
+              }
+              console.log("Setting power to", currentSpeed);
+              bMotor.setPower(currentSpeed);
+            }
+          });
+
+          console.log(`Connected to remote (${remoteHub.name})!`);
+          if (trainHub && remoteHub) {
+            console.log("You're now ready to go!");
+          }
+        }
+      });
+      const scan = function () {
+        if (PoweredUP.isWebBluetooth) {
+          poweredUP.scan(); // Start scanning for hubs
+        } else {
+          alert(
+            "Your browser does not support the Web Bluetooth specification."
+          );
+        }
+      };
+
+      scan();
+    </script>
+  </head>
+
+  <body>
+    <div><h1>Simple PoweredUp Controller</h1></div>
+    <div>
+      <a class="button" href="#" onclick="scan();">Connect to Hub</a>
+    </div>
+  </body>
+</html>
