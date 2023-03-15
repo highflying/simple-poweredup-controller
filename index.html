@@ -21,7 +21,11 @@
 
       poweredUP.on("discover", async (hub) => {
         console.log("found hub", hub);
-        if (hub.type === PoweredUP.Consts.HubType.WEDO2_SMART_HUB) {
+        if (
+          hub.type === PoweredUP.Consts.HubType.WEDO2_SMART_HUB ||
+          hub.type === PoweredUP.Conts.HubType.HUB ||
+          hub.type === PoweredUP.Conts.HubType.TECHNIC_MEDIUM_HUB
+        ) {
           trainHub = hub;
           await trainHub.connect();
           const led = await trainHub.waitForDeviceByType(
